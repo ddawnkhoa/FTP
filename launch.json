@@ -1,0 +1,37 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run FTP Client",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/ftp_client.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": true,
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        { "description": "Enable pretty-printing", "text": "-enable-pretty-printing", "ignoreFailures": true }
+      ]
+    },
+    {
+      "name": "Run ClamAV Agent",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/clamav_agent.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": true,
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        { "description": "Enable pretty-printing", "text": "-enable-pretty-printing", "ignoreFailures": true }
+      ]
+    }
+  ]
+}

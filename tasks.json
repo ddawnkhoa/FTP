@@ -1,0 +1,33 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build FTP Client",
+      "type": "shell",
+      "command": "g++",
+      "args": [
+        "ftp_client.cpp",
+        "-o",
+        "ftp_client.exe",
+        "-lws2_32"
+      ],
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Compile ftp_client.cpp"
+    },
+    {
+      "label": "Build ClamAV Agent",
+      "type": "shell",
+      "command": "g++",
+      "args": [
+        "clamav_agent.cpp",
+        "-o",
+        "clamav_agent.exe",
+        "-lws2_32"
+      ],
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Compile clamav_agent.cpp"
+    }
+  ]
+}
