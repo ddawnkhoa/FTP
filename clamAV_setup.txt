@@ -1,0 +1,11 @@
+1/ Cấu hình Path cho clamAV:
+- Vào taskbar, search và chọn "Edit the system environment variables" -> Advanced -> Environment variables -> Chọn Path (trong User variables for user), sau đó Edit + New và dán địa chỉ folder của clamAV sau khi giải nén. Làm tương tự cho phần Path của System variables.
+
+2/ Cấu hình database cho clamAV
+- Tạo folder database trong folder clamAV.
+- Nhập "cmd" tại thanh địa chỉ của folder clamAV và nhập các lệnh sau: 
+copy .\conf_examples\freshclam.conf.sample .\freshclam.conf
+copy .\conf_examples\clamd.conf.sample .\clamd.conf
+write.exe .\freshclam.conf (hoặc notepad .\freshclam.conf nếu báo lỗi). Sau đó xóa dòng "Example" và ký tự "#" tại dòng "#DatabaseDirectory "C:\Program Files\ClamAV\database". Đổi đường dẫn "C:\Program Files\ClamAV\database: thành đường dẫn của folder database.
+write.exe .\clamd.conf (hoặc notepad .\clamd.conf nếu báo lỗi). Sau đó xóa dòng "Example".
+- Tiếp tục nhập "freshclam" trên terminad để khởi tạo database cho clamAV.
