@@ -8,4 +8,4 @@ copy .\conf_examples\freshclam.conf.sample .\freshclam.conf
 copy .\conf_examples\clamd.conf.sample .\clamd.conf
 write.exe .\freshclam.conf (hoặc notepad .\freshclam.conf nếu báo lỗi). Sau đó xóa dòng "Example" và ký tự "#" tại dòng "#DatabaseDirectory "C:\Program Files\ClamAV\database". Đổi đường dẫn "C:\Program Files\ClamAV\database: thành đường dẫn của folder database.
 write.exe .\clamd.conf (hoặc notepad .\clamd.conf nếu báo lỗi). Sau đó xóa dòng "Example".
-- Tiếp tục nhập "freshclam" trên terminad để khởi tạo database cho clamAV.
+- Tiếp tục nhập "freshclam" trên terminal để khởi tạo database cho clamAV.
