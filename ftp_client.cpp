@@ -407,7 +407,12 @@ int main() {
         if (hConnect) {
             cout << "[FTP] Already connected. " << endl;
         }
-        else openConnection();
+        else {
+            cout << "Enter server: "; cin >> ftpServer;
+            cout << "Enter username: "; cin >> username;
+            cout << "Enter password: "; cin >> password;
+            openConnection();
+        }
        }
        else if (cmd == "close") {
         if (!hConnect) {
