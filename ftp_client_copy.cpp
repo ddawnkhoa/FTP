@@ -618,11 +618,6 @@ void showHelp() {
 int main() {
     cout << "Enter FTP server address: ";
     cin >> ftpServer;
-    controlSocket = connectToFTPServer(ftpServer, 21);
-    if (controlSocket == INVALID_SOCKET) return 1;
-
-    cout << receiveResponse(controlSocket); // welcome message
-
     cout << "Enter username: ";
     cin >> username;
     cout << "Enter password: ";
@@ -630,6 +625,11 @@ int main() {
     cout << "Enter clamAV agent address: ";
     cin >> clamAVAgent;
     cin.ignore();
+    
+    controlSocket = connectToFTPServer(ftpServer, 21);
+    if (controlSocket == INVALID_SOCKET) return 1;
+
+    cout << receiveResponse(controlSocket); // welcome message 
 
     sendCommand(controlSocket, "USER " + username);
     cout << receiveResponse(controlSocket);
