@@ -99,6 +99,7 @@ void disconnectFromServer() {
 }
 
 bool sendFileToScan(const char* filename, const char* host, int port) {
+    cout << "[DEBUG] Connecting to ClamAV at " << host << ":" << port << endl;
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         cerr << "[ERROR] WSAStartup failed." << endl;
@@ -455,6 +456,8 @@ void renameFileOnServer(const string& oldName, const string& newName) {
 }
 
 bool uploadFile(const string& filename) {
+     cout << "[DEBUG] Uploading file: " << filename << endl;
+     cout << "[DEBUG] Calling sendFileToScan..." << endl;
     if (!sendFileToScan(filename.c_str(), clamAVAgent.c_str(), 9001)) {
         cerr << "[ERROR] File failed virus scan. Upload aborted." << endl;
         logAction("put", filename, "FAILED");
@@ -688,6 +691,120 @@ void printStatus() {
     cout << "===========================\n";
 }
 
+void uploadFolder(const string& folderPath) {
+    WIN32_FIND_DATAA findData;
+    HANDLE hFind = INVALID_HANDLE_VALUE;
+
+    string searchPath = folderPath + "\\*";
+    hFind = FindFirstFileA(searchPath.c_str(), &findData);
+
+    if (hFind == INVALID_HANDLE_VALUE) {
+        cerr << "[ERROR] Cannot open folder: " << folderPath << endl;
+        return;
+    }
+
+    // Get folder name from Folderpath
+    size_t lastSlash = folderPath.find_last_of("\\/");
+    string folderName = (lastSlash != string::npos) ? folderPath.substr(lastSlash + 1) : folderPath;
+
+    // Create new remote folder
+    sendCommand(controlSocket, "MKD " + folderName);
+    receiveResponse(controlSocket); // ignore errors if folder already exists
+
+    // Change current directory to the new remote folder
+    sendCommand(controlSocket, "CWD " + folderName);
+    string cwdResp = receiveResponse(controlSocket);
+    if (cwdResp[0] != '2') {
+        cerr << "[ERROR] Failed to change directory to " << folderName << " on server." << endl;
+        FindClose(hFind);
+        return;
+    }
+
+    do {
+        const string itemName = findData.cFileName;
+
+        if (itemName == "." || itemName == "..")
+            continue;
+
+        string fullPath = folderPath + "\\" + itemName;
+
+        if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            makeDirectory(itemName);
+            changeDirectory(itemName);
+            uploadFolder(fullPath);
+            changeDirectory("..");
+        }
+        else {
+            uploadFile(fullPath);
+        }
+
+    } while (FindNextFileA(hFind, &findData));
+
+    FindClose(hFind);
+}
+
+void downloadFolder(const string& remoteFolder, const string& localFolder) {
+    CreateDirectoryA(localFolder.c_str(), NULL);
+    changeDirectory(remoteFolder);
+
+    SOCKET dataSocket = openDataConnection();
+    sendCommand(controlSocket, "LIST");
+    string response = receiveResponse(controlSocket);
+
+    if (response.substr(0, 3) != "150" && response.substr(0, 3) != "125") {
+        cerr << "[ERROR] Cannot list folder: " << remoteFolder << endl;
+        closesocket(dataSocket);
+        return;
+    }
+
+    vector<string> filesAndDirs;
+    char buffer[BUFFER_SIZE];
+    int bytesReceived;
+    string listing;
+
+    while ((bytesReceived = recv(dataSocket, buffer, BUFFER_SIZE - 1, 0)) > 0) {
+        buffer[bytesReceived] = '\0';
+        listing += buffer;
+    }
+
+    closesocket(dataSocket);
+    receiveResponse(controlSocket); // 226 Transfer complete
+
+    istringstream iss(listing);
+    string line;
+    while (getline(iss, line)) {
+        if (line.empty()) continue;
+
+        // Tìm vị trí cuối cùng chứa dung lượng hoặc <DIR>, tên bắt đầu sau đó
+        size_t nameStart = line.find_last_of(" \t");
+        while (nameStart != string::npos && (nameStart + 1 < line.length()) && isspace(line[nameStart])) {
+            nameStart--;
+        }
+        nameStart = line.find_first_not_of(" \t", nameStart + 1);
+
+        string name = line.substr(nameStart);
+        string lower = line;
+        transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+
+        bool isDirectory = lower.find("<dir>") != string::npos;
+
+        if (isDirectory) {
+        if (name != "." && name != "..") {
+            changeDirectory(name);
+            downloadFolder(name, localFolder + "\\" + name);
+            sendCommand(controlSocket, "CDUP");
+            receiveResponse(controlSocket);
+            }
+        }
+        else {
+            downloadFile(name);
+            if (!MoveFileA(name.c_str(), (localFolder + "\\" + name).c_str())) {
+                cerr << "[ERROR] Failed to move file: " << name << endl;
+            }
+        }    
+    }
+}
+
 void showHelp() {
     cout << "======= FTP Client Commands =======" << endl;
     cout << "open             : Connect to FTP server" << endl;
@@ -708,7 +825,8 @@ void showHelp() {
     cout << "binary           : Set transfer mode to BINARY (default)" << endl;
     cout << "prompt           : Toggle prompt before multi get/put" << endl;
     cout << "passive          : Toggle passive FTP mode" << endl;
-    cout << "help             : Show this help message" << endl;
+    cout << "putdir           : Upload a local folder recursively" << endl;
+    cout << "getdir           : Download a remote folder recursively" << endl;
     cout << "quit / bye       : Exit the FTP client" << endl;
     cout << "help / ?         : Show help text for commands" << endl;
     cout << "===================================" << endl;
@@ -849,15 +967,33 @@ int main() {
             string oldName, newName;
             iss >> oldName;
             if (oldName.empty()) {
-                cerr << "[ERROR] Old filename is required.\n";
+                cerr << "[ERROR] Old filename is required." << endl;
                 continue;
             }
             iss >> newName;
             if (newName.empty()) {
-            cerr << "[ERROR] New filename is required.\n";
+            cerr << "[ERROR] New filename is required." << endl;
             continue;
             }
             renameFileOnServer(oldName, newName);
+        }
+        else if (cmd == "putdir") {
+            string folderPath;
+            iss >> folderPath;
+            if (folderPath.empty()) {
+                cout << "[ERROR] Missing folder path.\n";
+                continue;
+            }
+            uploadFolder(folderPath);
+        }
+        else if (cmd == "getdir") {
+            string remoteFolder, localFolder;
+            iss >> remoteFolder >> localFolder;
+            if (remoteFolder.empty() || localFolder.empty()) {
+                cout << "[ERROR] Usage: getdir <remote> <local>\n";
+                continue;
+            }
+            downloadFolder(remoteFolder, localFolder);
         }
         else if (cmd == "help" || cmd == "?") showHelp();
         else cout << "[ERROR] Unknown command. Type 'help' to see available commands." << endl;
